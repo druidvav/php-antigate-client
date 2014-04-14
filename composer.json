@@ -1,5 +1,5 @@
 {
-    "name": "druidvav/php-antigate-client",
+    "name": "druidvav/antigate-client",
     "description": "Lightweight client for Antigate service",
     "keywords": ["captcha", "decaptcha", "antigate", "decaptcher"],
     "homepage": "https://github.com/druidvav/php-antigate-client",
