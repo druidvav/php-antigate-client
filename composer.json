@@ -1,0 +1,21 @@
+{
+    "name": "druidvav/php-antigate-client",
+    "description": "Lightweight client for Antigate service",
+    "keywords": ["captcha", "decaptcha", "antigate", "decaptcher"],
+    "homepage": "https://github.com/druidvav/php-antigate-client",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability" : "stable",
+    "require": {
+        "php":">=5.3.0",
+        "kriswallsmith/buzz": "*"
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "autoload": {
+        "psr-0": {
+            "NekoWeb": "lib/"
+        }
+    }
+}
