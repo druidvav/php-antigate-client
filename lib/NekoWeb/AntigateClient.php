@@ -5,15 +5,14 @@ use GuzzleHttp\Client;
 
 class AntigateClient
 {
-
-    public $apiServer = 'http://antigate.com';
+    public $apiServer;
     protected $client;
     protected $apiKey;
 
-    public function __construct($apiServer = 'http://antigate.com', $guzzleOptions = [ ])
+    public function __construct($guzzleOptions = [ ], $apiServer = 'http://antigate.com')
     {
-        $this->apiServer = $apiServer;
         $this->client = new Client($guzzleOptions);
+        $this->apiServer = $apiServer;
     }
 
     public function setApiKey($apiKey)
