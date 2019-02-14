@@ -1,12 +1,20 @@
 <?php
 namespace NekoWeb;
 
-use Buzz;
+use GuzzleHttp\Client;
 
 class AntigateClient
 {
+
     public $apiServer = 'http://antigate.com';
+    protected $client;
     protected $apiKey;
+
+    public function __construct($apiServer = 'http://antigate.com', $guzzleOptions = [ ])
+    {
+        $this->apiServer = $apiServer;
+        $this->client = new Client($guzzleOptions);
+    }
 
     public function setApiKey($apiKey)
     {
@@ -18,7 +26,7 @@ class AntigateClient
      * @param array $config @see sendCaptcha
      * @return string
      */
-    public function recognize($captchaBody, array $config = array())
+    public function recognize($captchaBody, array $config = [ ])
     {
         $captchaId = $this->sendCaptcha($captchaBody, $config);
         do {
@@ -33,7 +41,7 @@ class AntigateClient
      * @param array $config @see sendCaptcha
      * @return string
      */
-    public function recognizeByFilename($filename, array $config = array())
+    public function recognizeByFilename($filename, array $config = [ ])
     {
         $captchaId = $this->sendCaptchaByFilename($filename, $config);
         do {
@@ -48,7 +56,7 @@ class AntigateClient
      * @param array $config @see sendCaptcha
      * @return string
      */
-    public function recognizeByUrl($url, array $config = array())
+    public function recognizeByUrl($url, array $config = [ ])
     {
         $captchaId = $this->sendCaptchaByUrl($url, $config);
         do {
@@ -64,7 +72,7 @@ class AntigateClient
      * @throws AntigateException
      * @return int
      */
-    public function sendCaptchaByFilename($filename, array $config = array())
+    public function sendCaptchaByFilename($filename, array $config = [ ])
     {
         return $this->sendCaptcha(file_get_contents($filename), $config);
     }
@@ -75,11 +83,9 @@ class AntigateClient
      * @throws AntigateException
      * @return int
      */
-    public function sendCaptchaByUrl($url, array $config = array())
+    public function sendCaptchaByUrl($url, array $config = [ ])
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->get($url);
-        return $this->sendCaptcha($response->getContent(), $config);
+        return $this->sendCaptcha(strval($this->client->get($url)->getBody()), $config);
     }
 
     /**
@@ -96,17 +102,16 @@ class AntigateClient
      * @throws AntigateException
      * @return int
      */
-    public function sendCaptcha($captchaBody, array $config = array())
+    public function sendCaptcha($captchaBody, array $config = [ ])
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->post("{$this->apiServer}/in.php", array(), http_build_query(array_merge($config, array(
-            'method' => 'base64',
-            'key'    => $this->apiKey,
-            'body'   => base64_encode($captchaBody),
-        ))));
-
-        $responseData = explode('|', $response->getContent(), 2);
-
+        $response = $this->client->post("{$this->apiServer}/in.php", [
+            'post_params' => array_merge($config, [
+                'method' => 'base64',
+                'key'    => $this->apiKey,
+                'body'   => base64_encode($captchaBody),
+            ])
+        ]);
+        $responseData = explode('|', strval($response->getBody()), 2);
         if ($responseData[0] != 'OK') {
             throw new AntigateException($responseData[0]);
         }
@@ -123,14 +128,13 @@ class AntigateClient
      */
     public function checkStatus($id)
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->get("{$this->apiServer}/res.php?" . http_build_query(array(
+        $response = $this->client->get("{$this->apiServer}/res.php?" . http_build_query([
                 'action' => 'get',
                 'key'    => $this->apiKey,
                 'id'     => $id
-            )));
+            ]));
 
-        $responseData = explode('|', $response->getContent(), 2);
+        $responseData = explode('|', $response->getBody(), 2);
 
         if ($responseData[0] == 'CAPCHA_NOT_READY') {
             return false;
@@ -160,13 +164,12 @@ class AntigateClient
      */
     public function getBalance()
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->get("{$this->apiServer}/res.php?" . http_build_query(array(
+        $response = $this->client->get("{$this->apiServer}/res.php?" . http_build_query([
                 'action' => 'getbalance',
                 'key'    => $this->apiKey
-            )));
+            ]));
 
-        return (float) $response->getContent();
+        return (float) $response->getBody();
     }
 
     /**
@@ -176,22 +179,21 @@ class AntigateClient
      */
     public function getStatistic($date)
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->get("{$this->apiServer}/res.php?" . http_build_query(array(
+        $response = $this->client->get("{$this->apiServer}/res.php?" . http_build_query([
                 'action' => 'getstats',
                 'key'    => $this->apiKey,
                 'date'   => $date,
-            )));
+            ]));
 
         /** @var $xml \SimpleXMLElement */
-        if ($xml = simplexml_load_string($response->getContent())) {
-            $statistic = array();
+        if ($xml = simplexml_load_string($response->getBody())) {
+            $statistic = [ ];
             foreach ($xml->stats as $hourXml) {
                 $hour             = (int) $hourXml->attributes()->hour;
-                $statistic[$hour] = array(
+                $statistic[$hour] = [
                     'volume' => (int) $hourXml->volume,
                     'money'  => (float) $hourXml->money,
-                );
+                ];
             }
             return $statistic;
         }
@@ -200,19 +202,18 @@ class AntigateClient
 
     public function getRealtimeStatistic()
     {
-        $browser = new Buzz\Browser();
-        $response = $browser->get("{$this->apiServer}/load.php?" . http_build_query(array(
+        $response = $this->client->get("{$this->apiServer}/load.php?" . http_build_query([
                 'key' => $this->apiKey,
-            )));
+            ]));
 
         /** @var $xml \SimpleXMLElement */
-        if ($xml = simplexml_load_string($response->getContent())) {
-            return array(
+        if ($xml = simplexml_load_string($response->getBody())) {
+            return [
                 'waiting'                => (int) $xml->waiting,
                 'load'                   => (float) $xml->load,
                 'minbid'                 => (float) $xml->minbid,
                 'averageRecognitionTime' => (float) $xml->averageRecognitionTime,
-            );
+            ];
         }
         throw new AntigateException('Invalid API response');
     }
