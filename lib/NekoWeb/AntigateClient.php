@@ -105,7 +105,7 @@ class AntigateClient
     public function sendCaptcha($captchaBody, array $config = [ ])
     {
         $response = $this->client->post("{$this->apiServer}/in.php", [
-            'post_params' => array_merge($config, [
+            'form_params' => array_merge($config, [
                 'method' => 'base64',
                 'key'    => $this->apiKey,
                 'body'   => base64_encode($captchaBody),
